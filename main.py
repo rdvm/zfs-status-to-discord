@@ -22,3 +22,18 @@ config:
             d3203934-b71a-4235-abdf-60c0a0ef117b  ONLINE       0     0     0
 
 errors: No known data errors """
+
+
+# returns a substring from zpool status by finding
+# the index of the `start` and `end` parameters
+def get_section(output, start, end):
+    words = output.split()
+    indStart = words.index(start)
+    indEnd = words.index(end)
+    section = ""
+    for i in range(indStart, indEnd):
+        section += words[i] + " "
+    return section.rstrip()
+
+
+print(get_section(zStatus, "scan:", "config:"))
