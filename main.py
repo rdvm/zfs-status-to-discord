@@ -1,3 +1,4 @@
+from datetime import datetime, date, timedelta
 
 # example output for testing
 zStatus = """  pool: pool_1
@@ -26,7 +27,7 @@ errors: No known data errors """
 
 # returns a substring from zpool status by finding
 # the index of the `start` and `end` parameters
-def get_section(output, start, end):
+def get_section(start, end, output=zStatus):
     words = output.split()
     indStart = words.index(start)
     indEnd = words.index(end)
@@ -36,4 +37,27 @@ def get_section(output, start, end):
     return section.rstrip()
 
 
-print(get_section(zStatus, "scan:", "config:"))
+def get_state(start, end):
+    section = get_section(start, end)
+    if "ONLINE" in section:
+        zfsHealthy = True
+
+
+def get_status(start, end):
+    section = get_section(start, end)
+
+
+def get_scrub(start, end):
+    section = get_section(start, end)
+    words = section.split()
+    mnum = datetime.strptime(words[-4], '%b').month
+    scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
+    scrubInterval = timedelta(days=7)
+
+    if date.today() - scrubDate > scrubInterval:
+        return f"The last scrub was on {scrubDate}, which is within defined tolerance."
+    else:
+        return f"The last scrub was on {scrubDate}, which is outside defined tolerance."
+
+
+print(get_scrub("scan:", "config:"))
