@@ -1,4 +1,8 @@
 from datetime import datetime, date, timedelta
+from urllib.request import Request, urlopen
+import json
+import config
+
 
 # example output for testing
 zStatus = """  pool: pool_1
@@ -31,25 +35,33 @@ def get_section(start, end, output=zStatus):
     words = output.split()
     indStart = words.index(start)
     indEnd = words.index(end)
+    sectVal = []
     section = ""
-    for i in range(indStart, indEnd):
+    for i in range(indStart + 1, indEnd):
         section += words[i] + " "
-    return section.rstrip()
+    sectVal.append(words[indStart])
+    sectVal.append(section)
+    # return section.rstrip()
+    return sectVal
 
 
 def get_state(start, end):
     section = get_section(start, end)
-    if "ONLINE" in section:
-        zfsHealthy = True
+    if section[1].strip() == "ONLINE":
+        section.append(True)
+        return section
+    else:
+        section.append(False)
+        return section
 
 
 def get_status(start, end):
-    section = get_section(start, end)
+    return get_section(start, end)
 
 
 def get_scrub(start, end):
     section = get_section(start, end)
-    words = section.split()
+    words = section[1].split()
     mnum = datetime.strptime(words[-4], '%b').month
     scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
     scrubInterval = timedelta(days=7)
@@ -60,4 +72,51 @@ def get_scrub(start, end):
         return f"The last scrub was on {scrubDate}, which is outside defined tolerance."
 
 
-print(get_scrub("scan:", "config:"))
+stateMsg = get_state("state:", "status:")
+statusMsg = get_status("status:", "scan:")
+scanMsg = get_scrub("scan:", "config:")
+
+stateMsg[2] = False
+
+# Set discord variables depending on health status
+if stateMsg[2] is True:
+    discord_webhook = config.discord_info_webhook
+    discord_color = 4378646
+else:
+    discord_webhook = config.discord_alert_webhook
+    discord_color = 14177041
+
+message = {
+    "username": "ZFSBot",
+    "embeds": [
+        {
+          "color": discord_color,
+          "title": "ZFS Health Report",
+          "fields": [
+            {
+              "name": stateMsg[0].upper(),
+              "value": stateMsg[1]
+            },
+            {
+              "name": statusMsg[0].upper(),
+              "value": statusMsg[1]
+            },
+            {
+              "name": "SCAN:",
+              "value": scanMsg
+            }
+          ]
+        }
+    ]
+}
+
+req = Request(discord_webhook, json.dumps(message).encode('utf-8'))
+
+# specifying headers for the request
+# discord appears to block the default urllib user-agent
+req.add_header('Content-Type', 'application/json')
+req.add_header('User-Agent', 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11')
+
+response = urlopen(req)
+response.read()
+# print(get_scrub("scan:", "config:"))
