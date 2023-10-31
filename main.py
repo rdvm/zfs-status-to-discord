@@ -66,23 +66,27 @@ def get_scrub(start, end):
     scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
     scrubInterval = timedelta(days=7)
 
-    if date.today() - scrubDate > scrubInterval:
-        return f"The last scrub was on {scrubDate}, which is within defined tolerance."
+    if (date.today() - scrubDate) < scrubInterval:
+        section.append(True)
+        section.append(f"The last scrub was on {scrubDate}, which is within defined tolerance.")
+        return section
     else:
-        return f"The last scrub was on {scrubDate}, which is outside defined tolerance."
+        section.append(False)
+        section.append(f"The last scrub was on {scrubDate}, which is **outside defined tolerance.**")
+        return section
 
 
 stateMsg = get_state("state:", "status:")
 statusMsg = get_status("status:", "scan:")
 scanMsg = get_scrub("scan:", "config:")
 
-stateMsg[2] = False
-
 # Set discord variables depending on health status
-if stateMsg[2] is True:
+if stateMsg[2] is True and scanMsg[2] is True:
+    discord_title = "✅ ZFS Health Report ✅"
     discord_webhook = config.discord_info_webhook
     discord_color = 4378646
 else:
+    discord_title = "🚨 ZFS Health Report -- ATTENTION!! 🚨"
     discord_webhook = config.discord_alert_webhook
     discord_color = 14177041
 
@@ -90,8 +94,7 @@ message = {
     "username": "ZFSBot",
     "embeds": [
         {
-          "color": discord_color,
-          "title": "ZFS Health Report",
+          "color": discord_color, "title": discord_title,
           "fields": [
             {
               "name": stateMsg[0].upper(),
@@ -102,8 +105,8 @@ message = {
               "value": statusMsg[1]
             },
             {
-              "name": "SCAN:",
-              "value": scanMsg
+              "name": scanMsg[0].upper(),
+              "value": scanMsg[3]
             }
           ]
         }
@@ -118,5 +121,5 @@ req.add_header('Content-Type', 'application/json')
 req.add_header('User-Agent', 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11')
 
 response = urlopen(req)
-response.read()
+print(response.read())
 # print(get_scrub("scan:", "config:"))
