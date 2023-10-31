@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta
 from urllib.request import Request, urlopen
 import json
 import config
+import subprocess
 
 
 # example output for testing
@@ -27,6 +28,16 @@ config:
             d3203934-b71a-4235-abdf-60c0a0ef117b  ONLINE       0     0     0
 
 errors: No known data errors """
+
+zPoolStat = subprocess.run(['/sbin/zpool', 'status'], stdout=subprocess.PIPE, universal_newlines=True)
+zStatus = zPoolStat.stdout
+
+# Example zpool list
+zList = """ NAME     SIZE  ALLOC   FREE  CKPOINT  EXPANDSZ   FRAG    CAP  DEDUP    HEALTH  ALTROOT
+pool_1  87.2T  67.8T  19.4T        -         -     4%    77%  1.00x    ONLINE  - """
+
+zPoolList = subprocess.run(['/sbin/zpool', 'list'], stdout=subprocess.PIPE, universal_newlines=True)
+zList = zPoolList.stdout
 
 
 # returns a substring from zpool status by finding
