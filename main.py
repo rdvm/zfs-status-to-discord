@@ -13,9 +13,11 @@ def get_capacity():
     capVal = [capacity]
 
     if capacity >= 80:
-        capVal.append(f"Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
+        capVal.append(f"**WARNING** Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
+        capVal.append(False)
     else:
         capVal.append(f"Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
+        capVal.append(True)
 
     return capVal
 
@@ -60,7 +62,7 @@ def get_scrub():
     words = section[1].split()
     mnum = datetime.strptime(words[-4], '%b').month
     scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
-    scrubInterval = timedelta(days=7)
+    scrubInterval = timedelta(days=1)
 
     if (date.today() - scrubDate) < scrubInterval:
         section.append(True)
@@ -79,7 +81,7 @@ def zfs_report():
     scanMsg = get_scrub()
     capMsg = get_capacity()
 
-    if stateMsg[2] is True and scanMsg[2] is True:
+    if stateMsg[2] is True and scanMsg[2] is True and capMsg[2] is True:
         discord_title = "✅ ZFS Health Report ✅"
         discord_webhook = config.discord_info_webhook
         discord_color = 4378646
@@ -95,12 +97,12 @@ def zfs_report():
               "color": discord_color, "title": discord_title,
               "fields": [
                 {
-                  "name": "Pool Utilization",
-                  "value": capMsg[1]
-                },
-                {
                   "name": stateMsg[0].capitalize(),
                   "value": stateMsg[1]
+                },
+                {
+                  "name": "Pool Utilization",
+                  "value": capMsg[1]
                 },
                 {
                   "name": statusMsg[0].capitalize(),
