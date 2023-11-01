@@ -62,7 +62,7 @@ def get_scrub():
     words = section[1].split()
     mnum = datetime.strptime(words[-4], '%b').month
     scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
-    scrubInterval = timedelta(days=1)
+    scrubInterval = timedelta(days=7)
 
     if (date.today() - scrubDate) < scrubInterval:
         section.append(True)
