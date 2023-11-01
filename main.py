@@ -1,63 +1,57 @@
 from datetime import datetime, date, timedelta
 from urllib.request import Request, urlopen
 import json
-import config
 import subprocess
+import config
+import test_outputs
 
 
-# example output for testing
-zStatus = """  pool: pool_1
- state: ONLINE
-status: Some supported features are not enabled on the pool. The pool can
-        still be used, but some features are unavailable.
-action: Enable all features using 'zpool upgrade'. Once this is done,
-        the pool may no longer be accessible by software that does not support
-        the features. See zpool-features(5) for details.
-  scan: scrub repaired 0B in 1 days 01:39:59 with 0 errors on Tue Oct 24 02:40:01 2023
-config:
+# Get capacity info
+def get_capacity(debug):
 
-        NAME                                      STATE     READ WRITE CKSUM
-        pool_1                                    ONLINE       0     0     0
-          raidz1-0                                ONLINE       0     0     0
-            7a194cdc-d479-11ec-8448-d05099c2ffc9  ONLINE       0     0     0
-            5cc47781-d54a-11ec-8448-d05099c2ffc9  ONLINE       0     0     0
-            c2d32d6d-d62a-11ec-a5d4-d05099c2ffc9  ONLINE       0     0     0
-          raidz1-1                                ONLINE       0     0     0
-            a8a6a8f4-1c6c-4d6e-ad65-7054477db014  ONLINE       0     0     0
-            cf1c80ba-655f-4f67-8db7-a8dae4999a5f  ONLINE       0     0     0
-            d3203934-b71a-4235-abdf-60c0a0ef117b  ONLINE       0     0     0
+    if debug:
+        z_list = test_outputs.z_list_test
+    else:
+        z_list = subprocess.run(['/sbin/zpool', 'list'], stdout=subprocess.PIPE, universal_newlines=True).stdout
 
-errors: No known data errors """
+    words = z_list.split()
+    capacity = int(words[18].rstrip('%'))
+    capVal = [capacity]
 
-zPoolStat = subprocess.run(['/sbin/zpool', 'status'], stdout=subprocess.PIPE, universal_newlines=True)
-zStatus = zPoolStat.stdout
+    if capacity >= 80:
+        capVal.append(f"Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
+    else:
+        capVal.append(f"Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
 
-# Example zpool list
-zList = """ NAME     SIZE  ALLOC   FREE  CKPOINT  EXPANDSZ   FRAG    CAP  DEDUP    HEALTH  ALTROOT
-pool_1  87.2T  67.8T  19.4T        -         -     4%    77%  1.00x    ONLINE  - """
-
-zPoolList = subprocess.run(['/sbin/zpool', 'list'], stdout=subprocess.PIPE, universal_newlines=True)
-zList = zPoolList.stdout
+    return capVal
 
 
 # returns a substring from zpool status by finding
 # the index of the `start` and `end` parameters
-def get_section(start, end, output=zStatus):
-    words = output.split()
+def get_section(start, end, debug):
+
+    if debug:
+        z_status = test_outputs.z_status_test
+    else:
+        z_status = subprocess.run(['/sbin/zpool', 'status'], stdout=subprocess.PIPE, universal_newlines=True).stdout
+
+    words = z_status.split()
     indStart = words.index(start)
     indEnd = words.index(end)
-    sectVal = []
+    sectVal = [words[indStart]]
     section = ""
+
     for i in range(indStart + 1, indEnd):
         section += words[i] + " "
-    sectVal.append(words[indStart])
     sectVal.append(section)
-    # return section.rstrip()
+
     return sectVal
 
 
-def get_state(start, end):
-    section = get_section(start, end)
+def get_state(start, end, *, debug=False):
+
+    section = get_section(start, end, debug)
+
     if section[1].strip() == "ONLINE":
         section.append(True)
         return section
@@ -66,16 +60,18 @@ def get_state(start, end):
         return section
 
 
-def get_status(start, end):
-    return get_section(start, end)
+def get_status(start, end, *, debug=False):
+
+    return get_section(start, end, debug)
 
 
-def get_scrub(start, end):
-    section = get_section(start, end)
+def get_scrub(start, end, *, debug=False):
+
+    section = get_section(start, end, debug)
     words = section[1].split()
     mnum = datetime.strptime(words[-4], '%b').month
     scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
-    scrubInterval = timedelta(days=7)
+    scrubInterval = timedelta(days=9)
 
     if (date.today() - scrubDate) < scrubInterval:
         section.append(True)
@@ -90,6 +86,7 @@ def get_scrub(start, end):
 stateMsg = get_state("state:", "status:")
 statusMsg = get_status("status:", "scan:")
 scanMsg = get_scrub("scan:", "config:")
+capMsg = get_capacity()
 
 # Set discord variables depending on health status
 if stateMsg[2] is True and scanMsg[2] is True:
@@ -108,15 +105,19 @@ message = {
           "color": discord_color, "title": discord_title,
           "fields": [
             {
-              "name": stateMsg[0].upper(),
+              "name": "Pool Utilization",
+              "value": capMsg[1]
+            },
+            {
+              "name": stateMsg[0].capitalize(),
               "value": stateMsg[1]
             },
             {
-              "name": statusMsg[0].upper(),
+              "name": statusMsg[0].capitalize(),
               "value": statusMsg[1]
             },
             {
-              "name": scanMsg[0].upper(),
+              "name": scanMsg[0].capitalize(),
               "value": scanMsg[3]
             }
           ]
@@ -126,11 +127,10 @@ message = {
 
 req = Request(discord_webhook, json.dumps(message).encode('utf-8'))
 
-# specifying headers for the request
 # discord appears to block the default urllib user-agent
+# specifying headers for the request
 req.add_header('Content-Type', 'application/json')
 req.add_header('User-Agent', 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11')
 
 response = urlopen(req)
 print(response.read())
-# print(get_scrub("scan:", "config:"))
