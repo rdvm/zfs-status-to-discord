@@ -10,16 +10,16 @@ def get_capacity():
     z_list = subprocess.run(['/sbin/zpool', 'list'], stdout=subprocess.PIPE, universal_newlines=True).stdout
     words = z_list.split()
     capacity = int(words[18].rstrip('%'))
-    capVal = [capacity]
+    cap_val = [capacity]
 
     if capacity >= 80:
-        capVal.append(f"**WARNING** Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
-        capVal.append(False)
+        cap_val.append(f"**WARNING** Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
+        cap_val.append(False)
     else:
-        capVal.append(f"Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
-        capVal.append(True)
+        cap_val.append(f"Pool used capacity is **{capacity}%**. It is recommended to stay under 80%")
+        cap_val.append(True)
 
-    return capVal
+    return cap_val
 
 
 # returns a substring from zpool status by finding
@@ -27,16 +27,16 @@ def get_capacity():
 def get_section(start, end):
     z_status = subprocess.run(['/sbin/zpool', 'status'], stdout=subprocess.PIPE, universal_newlines=True).stdout
     words = z_status.split()
-    indStart = words.index(start)
-    indEnd = words.index(end)
-    sectVal = [words[indStart]]
+    ind_start = words.index(start)
+    ind_end = words.index(end)
+    sect_val = [words[ind_start]]
     section = ""
 
-    for i in range(indStart + 1, indEnd):
+    for i in range(ind_start + 1, ind_end):
         section += words[i] + " "
-    sectVal.append(section)
+    sect_val.append(section)
 
-    return sectVal
+    return sect_val
 
 
 # get the 'state:' section and set a boolean to indicate health
@@ -61,27 +61,27 @@ def get_scrub():
     section = get_section("scan:", "config:")
     words = section[1].split()
     mnum = datetime.strptime(words[-4], '%b').month
-    scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
-    scrubInterval = timedelta(days=7)
+    scrub_date = datetime(int(words[-1]), mnum, int(words[-3])).date()
+    scrub_interval = timedelta(days=7)
 
-    if (date.today() - scrubDate) < scrubInterval:
+    if (date.today() - scrub_date) < scrub_interval:
         section.append(True)
-        section.append(f"The last scrub was on {scrubDate}, which is within defined tolerance.")
+        section.append(f"The last scrub was on {scrub_date}, which is within defined tolerance.")
         return section
     else:
         section.append(False)
-        section.append(f"The last scrub was on {scrubDate}, which is **outside defined tolerance.**")
+        section.append(f"The last scrub was on {scrub_date}, which is **outside defined tolerance.**")
         return section
 
 
 # Set discord variables depending on health status
 def zfs_report():
-    stateMsg = get_state()
-    statusMsg = get_status()
-    scanMsg = get_scrub()
-    capMsg = get_capacity()
+    state_msg = get_state()
+    status_msg = get_status()
+    scan_msg = get_scrub()
+    cap_msg = get_capacity()
 
-    if stateMsg[2] is True and scanMsg[2] is True and capMsg[2] is True:
+    if state_msg[2] is True and scan_msg[2] is True and cap_msg[2] is True:
         discord_title = "✅ ZFS Health Report ✅"
         discord_webhook = config.discord_info_webhook
         discord_color = 4378646
@@ -97,20 +97,20 @@ def zfs_report():
               "color": discord_color, "title": discord_title,
               "fields": [
                 {
-                  "name": stateMsg[0].capitalize(),
-                  "value": stateMsg[1]
+                  "name": state_msg[0].capitalize(),
+                  "value": state_msg[1]
                 },
                 {
                   "name": "Pool Utilization",
-                  "value": capMsg[1]
+                  "value": cap_msg[1]
                 },
                 {
-                  "name": statusMsg[0].capitalize(),
-                  "value": statusMsg[1]
+                  "name": status_msg[0].capitalize(),
+                  "value": status_msg[1]
                 },
                 {
-                  "name": scanMsg[0].capitalize(),
-                  "value": scanMsg[3]
+                  "name": scan_msg[0].capitalize(),
+                  "value": scan_msg[3]
                 }
               ]
             }
