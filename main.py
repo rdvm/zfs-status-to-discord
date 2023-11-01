@@ -38,8 +38,8 @@ def get_section(start, end):
 
 
 # get the 'state:' section and set a boolean to indicate health
-def get_state(start, end):
-    section = get_section(start, end)
+def get_state():
+    section = get_section("state:", "status:")
 
     if section[1].strip() == "ONLINE":
         section.append(True)
@@ -50,17 +50,17 @@ def get_state(start, end):
 
 
 # get the 'status:' section
-def get_status(start, end):
-    return get_section(start, end)
+def get_status():
+    return get_section("status:", "action:")
 
 
 # get the 'scan:' section for scrub info
-def get_scrub(start, end):
-    section = get_section(start, end)
+def get_scrub():
+    section = get_section("scan:", "config:")
     words = section[1].split()
     mnum = datetime.strptime(words[-4], '%b').month
     scrubDate = datetime(int(words[-1]), mnum, int(words[-3])).date()
-    scrubInterval = timedelta(days=9)
+    scrubInterval = timedelta(days=7)
 
     if (date.today() - scrubDate) < scrubInterval:
         section.append(True)
@@ -74,9 +74,9 @@ def get_scrub(start, end):
 
 # Set discord variables depending on health status
 def zfs_report():
-    stateMsg = get_state("state:", "status:")
-    statusMsg = get_status("status:", "scan:")
-    scanMsg = get_scrub("scan:", "config:")
+    stateMsg = get_state()
+    statusMsg = get_status()
+    scanMsg = get_scrub()
     capMsg = get_capacity()
 
     if stateMsg[2] is True and scanMsg[2] is True:
