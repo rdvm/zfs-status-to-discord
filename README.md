@@ -17,7 +17,7 @@ Copy the [raw
 code](https://raw.githubusercontent.com/rdvm/zfs-status-to-discord/main/main.py)
 of `main.py` and create your own `main.py` file on your server. If you'd
 like to execute by name from anywhere, make sure that the file is somewhere in
-your path. Make the file executable by running
+your `$PATH`. Make the file executable by running
 
 ```sh
 chmod +x main.py

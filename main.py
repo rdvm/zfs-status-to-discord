@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from datetime import datetime, date, timedelta
 from urllib.request import Request, urlopen
 import json
