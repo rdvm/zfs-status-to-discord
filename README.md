@@ -3,8 +3,13 @@
 A little project built to deliver nicely formatted reports on the state of your
 `zfs` storage pool to a Discord server.
 
-![Screenshot of Discord message for healthy status](zfsHealthy.png)
-![Screenshot of Discord message for unhealthy status](zfsUnhealthy.png)
+<p align="center">
+  <img src="zfsHealthy.png" width=70% />
+  <br>
+  <img src="zfsUnhealthy.png" width=70% />
+<br>
+<ins><b><i>Healthy and unhealthy examples, respectively</i></b></ins>
+</p>
 
 ## Getting started
 
