@@ -16,7 +16,7 @@ A little project built to deliver nicely formatted reports on the state of your
 - Clone this repo
 - Create a `.env` file based on `.env.example` and update with your webhook
 URL(s)
-- Build the executable `go build -o zfs_report zfs_report.go`
+- Build the executable `CGO_ENABLED=0 go build -o zfs_report`
 
 > **Note**
 > I wanted the message to be routed to a different channel when there was an
