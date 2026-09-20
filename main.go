@@ -18,11 +18,6 @@ type Property struct {
 	Source Source `json:"source"`
 }
 
-type Source struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
-}
-
 type PoolList struct {
 	Name       string              `json:"name"`
 	State      string              `json:"state"`
@@ -31,6 +26,11 @@ type PoolList struct {
 
 type ZpoolList struct {
 	Pools map[string]PoolList `json:"pools"`
+}
+
+type Source struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
 }
 
 type ScanStats struct {
@@ -62,8 +62,7 @@ type ZpoolStatus struct {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
@@ -80,8 +79,7 @@ func main() {
 	}
 
 	var zpoolList ZpoolList
-	err = json.Unmarshal(output, &zpoolList)
-	if err != nil {
+	if err = json.Unmarshal(output, &zpoolList); err != nil {
 		log.Fatalf("Failed to parse zpool list JSON: %v", err)
 	}
 	if len(zpoolList.Pools) == 0 {
@@ -95,7 +93,12 @@ func main() {
 	}
 
 	capacityStr := poolList.Properties["capacity"].Value
-	capacity := parsePercentage(capacityStr)
+
+	var capacity int
+	_, err = fmt.Sscanf(capacityStr, "%d%%", &capacity)
+	if err != nil {
+		log.Fatalf("Failed to parse capacity percentage: %v", err)
+	}
 
 	cmd = exec.Command("zpool", "status", "-j")
 	output, err = cmd.Output()
@@ -104,8 +107,7 @@ func main() {
 	}
 
 	var zpoolStatus ZpoolStatus
-	err = json.Unmarshal(output, &zpoolStatus)
-	if err != nil {
+	if err = json.Unmarshal(output, &zpoolStatus); err != nil {
 		log.Fatalf("Failed to parse zpool status JSON: %v", err)
 	}
 	poolStatus, ok := zpoolStatus.Pools[poolName]
@@ -122,10 +124,10 @@ func main() {
 	}
 
 	monthAgo := time.Now().AddDate(0, 0, -31)
-	isScrubRecent := scanEndTime.After(monthAgo)
-	isCapacityOk := capacity < 80
-	isStateOk := state == "ONLINE" && poolStatus.ErrorCount == "0"
-	allOk := isStateOk && isCapacityOk && isScrubRecent
+	ScrubRecent := scanEndTime.After(monthAgo)
+	CapacityOk := capacity < 80
+	StateOk := state == "ONLINE" && poolStatus.ErrorCount == "0"
+	allOk := StateOk && CapacityOk && ScrubRecent
 
 	var title string
 	var webhook string
@@ -146,7 +148,7 @@ func main() {
 	}
 
 	var capMsg string
-	if isCapacityOk {
+	if CapacityOk {
 		capMsg = fmt.Sprintf(
 			"Pool used capacity is **%d%%**. It is recommended to stay under 80%%",
 			capacity,
@@ -161,7 +163,7 @@ func main() {
 
 	scanDate := scanEndTime.Format("2006-01-02")
 	var scanMsg string
-	if isScrubRecent {
+	if ScrubRecent {
 		scanMsg = fmt.Sprintf(
 			"The last scrub was on %s, which is within defined tolerance.",
 			scanDate,
@@ -205,13 +207,4 @@ func main() {
 	} else {
 		os.Exit(1)
 	}
-}
-
-func parsePercentage(s string) int {
-	var percent int
-	_, err := fmt.Sscanf(s, "%d%%", &percent)
-	if err != nil {
-		log.Fatalf("Failed to parse capacity percentage: %v", err)
-	}
-	return percent
 }
