@@ -124,10 +124,10 @@ func main() {
 	}
 
 	monthAgo := time.Now().AddDate(0, 0, -31)
-	ScrubRecent := scanEndTime.After(monthAgo)
-	CapacityOk := capacity < 80
-	StateOk := state == "ONLINE" && poolStatus.ErrorCount == "0"
-	allOk := StateOk && CapacityOk && ScrubRecent
+	scrubRecent := scanEndTime.After(monthAgo)
+	capacityOk := capacity < 80
+	stateOk := state == "ONLINE" && poolStatus.ErrorCount == "0"
+	allOk := stateOk && capacityOk && scrubRecent
 
 	var title string
 	var webhook string
@@ -148,7 +148,7 @@ func main() {
 	}
 
 	var capMsg string
-	if CapacityOk {
+	if capacityOk {
 		capMsg = fmt.Sprintf(
 			"Pool used capacity is **%d%%**. It is recommended to stay under 80%%",
 			capacity,
@@ -163,7 +163,7 @@ func main() {
 
 	scanDate := scanEndTime.Format("2006-01-02")
 	var scanMsg string
-	if ScrubRecent {
+	if scrubRecent {
 		scanMsg = fmt.Sprintf(
 			"The last scrub was on %s, which is within defined tolerance.",
 			scanDate,
